@@ -1,6 +1,7 @@
 rozetka.com.ua parser v1.0(RELEASE)
 ===================================
 How to use?:
+Launch main.exe
 1.Enter rozetka's link to the console with "":
 Examlpe:"https://hard.rozetka.com.ua/videocards/c80087/"
 2.Wait for parse
