@@ -4,12 +4,12 @@ from saver import save
 import os
 import time
 # Адресс страницы 'https://hard.rozetka.com.ua/videocards/c80087/' https://hard.rozetka.com.ua/motherboards/c80082/
-URL = input('Enter link to rozetka with ""\n(EXAMPLE:"https://hard.rozetka.com.ua/videocards/c80087/"):\n').replace('"','')
+
 
 # Главная функция
-def parse():
+def parse(url):
     # Получаем html
-    page = get_html(URL)
+    page = get_html(url)
     if page.status_code == 200:
         print('='*50)
         print('[+]Connected.')
@@ -18,7 +18,7 @@ def parse():
         pages = get_pages(page.text)
         for page in range(1, pages+1):
             print(f'Info checking {page} from {pages}')
-            page = get_html(URL, params={'page': page})
+            page = get_html(url, params={'page': page})
             hardware.extend(content(page.text))
         print(f'''{'='*50}
 \t\t\t\tReady!
@@ -66,8 +66,41 @@ def content(page):
         })
     return videocards
 
-try:
-    parse()
-except Exception:
-    print('Failed to get link.')
 
+print("="*50)
+print("\t\t\tRozetka parser v2.0")
+print("="*50)
+while True:
+    mode = input('''Choose what to do:
+1.Parse videocards.
+2.Parse motherboards.
+3.Parse RAM.
+4.Parse CPU.
+5.Your link.
+6.Exit.\n''')
+    if mode == '1':
+        url = 'https://hard.rozetka.com.ua/videocards/c80087/'
+        parse(url)
+    elif mode == '2':
+        url = 'https://hard.rozetka.com.ua/motherboards/c80082/'
+        parse(url)
+    elif mode == '3':
+        url = 'https://hard.rozetka.com.ua/memory/c80081/'
+        parse(url)
+    elif mode == '4':
+        url = 'https://hard.rozetka.com.ua/processors/c80083/'
+        parse(url)
+    elif mode == '5':
+        url = input(
+            'Enter link to rozetka with ""\n(EXAMPLE:"https://hard.rozetka.com.ua/videocards/c80087/"):\n').replace('"',
+                                                                                                                    '')
+        try:
+            parse(url)
+        except Exception:
+            print("Error with link connection.")
+            continue
+    elif mode == '6':
+        exit()
+    else:
+        print("Unknown command.")
+        continue
