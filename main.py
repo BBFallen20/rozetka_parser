@@ -1,106 +1,59 @@
 from bs4 import BeautifulSoup
 from request import get_html
+from requests.exceptions import MissingSchema, InvalidURL
 from saver import save
-import os
-import time
-# Адресс страницы 'https://hard.rozetka.com.ua/videocards/c80087/' https://hard.rozetka.com.ua/motherboards/c80082/
 
 
-# Главная функция
-def parse(url):
-    # Получаем html
-    page = get_html(url)
-    if page.status_code == 200:
-        print('='*50)
-        print('[+]Connected.')
-        print('=' * 50)
-        hardware = []
-        pages = get_pages(page.text)
-        for page in range(1, pages+1):
-            print(f'Info checking {page} from {pages}')
-            page = get_html(url, params={'page': page})
-            hardware.extend(content(page.text))
-        print(f'''{'='*50}
-\t\t\t\tReady!
-Finded: {len(hardware)} products.
-{'='*50}''')
-        path = input("Enter way to save the file:\n")+'\hardware.csv'
-        try:
-            save(hardware, path)
-            print('='*50)
-            print('Saved.(hardware.csv)')
-            print('='*50)
-            time.sleep(1.5)
-            os.startfile(path)
-        except:
-            print("Failed to save to the path.")
+def check_connection(url: str):
+    try:
+        html_page = get_html(url)
+    except MissingSchema:
+        print("[X]Connection error.")
+        return False
+    except InvalidURL:
+        print("[X]Invalid url.")
+        return False
+    connected = True if html_page.status_code == 200 else False
+    if connected:
+        print("[V]Connection success.")
+        return html_page.content
     else:
-        print('='*50)
-        print('[!]Connection error.')
-        print('=' * 50)
+        print("[X]Connection error.")
+        return False
 
 
-def get_pages(page):
-    soup = BeautifulSoup(page, 'html.parser')
-    pagination_item = soup.find_all('a', class_='pagination__link')
-    if pagination_item:
-        return int(pagination_item[-1].get_text())
-    else:
-        return 1
-
-
-
-def content(page):
-    soup = BeautifulSoup(page, 'html.parser')
-    # Парсим все карточки из каталога
-    cards = soup.find_all('div', class_='goods-tile__inner')
-    # Словарь для итоговых значений
-    videocards = []
-    # Циклом проходимся по всем карточкам,собирая инфу
-    for card in cards:
-        videocards.append({ # Добавляем в словарь
-            'title': card.find('span', class_='goods-tile__title').get_text(strip=True), # Название товара
-            'link': card.find('a', class_='goods-tile__heading',).get('href'), # СсылОЧКА
-            'price': card.find('span', class_='goods-tile__price-value',).get_text(strip=True), # СсылОЧКА
-
+def data_extracting(html):
+    soup = BeautifulSoup(html, 'html.parser')
+    raw_data = soup.find_all('div', class_='goods-tile__inner')
+    cleaned_data = []
+    for item in raw_data:
+        cleaned_data.append({
+            'title': item.find('a', class_='goods-tile__heading')['title'],
+            'price': item.find('span', class_='goods-tile__price-value').text.strip(),
+            'link': item.find('a', class_='goods-tile__heading')['href']
         })
-    return videocards
+    return cleaned_data
 
 
-print("="*50)
-print("\t\t\tRozetka parser v2.0")
-print("="*50)
-while True:
-    mode = input('''Choose what to do:
-1.Parse videocards.
-2.Parse motherboards.
-3.Parse RAM.
-4.Parse CPU.
-5.Your link.
-6.Exit.\n''')
-    if mode == '1':
-        url = 'https://hard.rozetka.com.ua/videocards/c80087/'
-        parse(url)
-    elif mode == '2':
-        url = 'https://hard.rozetka.com.ua/motherboards/c80082/'
-        parse(url)
-    elif mode == '3':
-        url = 'https://hard.rozetka.com.ua/memory/c80081/'
-        parse(url)
-    elif mode == '4':
-        url = 'https://hard.rozetka.com.ua/processors/c80083/'
-        parse(url)
-    elif mode == '5':
-        url = input(
-            'Enter link to rozetka with ""\n(EXAMPLE:"https://hard.rozetka.com.ua/videocards/c80087/"):\n').replace('"',
-                                                                                                                    '')
+def main():
+    url = input("Enter url to parse:\n")
+    connection = check_connection(url)
+    if connection:
+        cleaned_data = []
+        pages = int(BeautifulSoup(connection, 'html.parser').find_all('a', class_='pagination__link')[-1].get_text())
+        for page in range(1, pages+1):
+            print(f"Page {page} from {pages}")
+            page = get_html(url, params={'page': page})
+            for item in data_extracting(page.content):
+                cleaned_data.append(item)
+        path = input("Enter path to save csv file:\n")
         try:
-            parse(url)
-        except Exception:
-            print("Error with link connection.")
-            continue
-    elif mode == '6':
-        exit()
+            save(cleaned_data, path)
+        except Exception as e:
+            print(e)
     else:
-        print("Unknown command.")
-        continue
+        return None
+
+
+if __name__ == '__main__':
+    main()
